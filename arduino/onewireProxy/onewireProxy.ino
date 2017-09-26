@@ -1,6 +1,6 @@
 #include <OneWire.h>
 
-OneWire ds(12);
+OneWire ds(9);
 
 void setup(void) {
   // initialize inputs/outputs

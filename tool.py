@@ -10,45 +10,46 @@ parser.add_argument("-t", "--test", help="Test eeprom (and arduino/connections e
 parser.add_argument("-c", "--clear", help="Clear the flash write all zeros.")
 
 def readROM():
-    sp.write("r")
+    sp.write("r".encode())
     return sp.read(9)
 
 def readFlash():
     sp.flushInput()
-    sp.write("f")
+    sp.write("f".encode())
     return sp.read(512)
 
 def pollForChip():
-    sp.write("x")
-    return sp.read(1) == "p"
+    sp.write("x".encode())
+    return sp.read(1) == "p".encode()
 
 def waitForChip():
     while True:
-        print "Polling for chip. . ."
+        print("Polling for chip. . .")
         if pollForChip(): break
         time.sleep(0.5)
-    print "\tfound!"
+    print("\tfound!")
 
     # Flush the serial port!
     sp.flushInput()
 
 
 def echo():
-    print "ping. . .",
-    sp.write("e")
+    print("ping. . .")
+    sp.write("e".encode())
     if sp.read() != "e":
-        print "No echo :("
+        print("No echo :(")
     else:
-        print "pong! (success)"
+        print("pong! (success)")
 def getPathForRom(rom):
-    return os.path.join("flash-dumps", binascii.hexlify(rom))
+    
+	return os.path.join("flash-dumps", binascii.hexlify(rom).decode())
 
 def dump2433():
     waitForChip()
 
     # Read the ROM.  echo its hex
     rom = readROM()
-    print(binascii.hexlify(rom) + " (" + str(len(rom)) + ")")
+    print(binascii.hexlify(rom).decode() + " (" + str(len(rom)) + ")")
 
     # Read it 5x and make sure they all match
     for reread in range(5): assert rom == readROM(), "Mismatched ROM read.  Aborting"
@@ -69,7 +70,7 @@ def dump2433():
     open(fullNamePath, "wb").write(flash)
 
     # Echo our success
-    print "Wrote", fullNamePath
+    print("Wrote", fullNamePath)
 
 def write2433(flash):
     waitForChip()
@@ -84,12 +85,12 @@ def write2433(flash):
     assert len(flash) == 512, "ROM size is not 512  ({0}".format(len(flash))
 
     # Transmit the write command + the new flash
-    sp.write("w")
-    sp.write(flash)
+    sp.write("w".encode())
+    sp.write(flash.encode())
 
     result = sp.read(3)
 
-    print "Write Result:", repr(result)
+    print("Write Result:", repr(result))
 
     if result == "t":
         print("Success")
@@ -100,7 +101,7 @@ def writeOldestToChip():
     waitForChip()
     currentRom = readROM()
 
-    print("Detected Chip with ROM: " + binascii.hexlify(currentRom))
+    print("Detected Chip with ROM: " + binascii.hexlify(currentRom).decode())
 
     romDIR = getPathForRom(currentRom)
     flashes = [f for f in os.listdir(romDIR) if not f.startswith(".")]
@@ -113,22 +114,26 @@ def writeOldestToChip():
 
     print("Verifying write")
     reread = readFlash()
+    oldestFlashData = oldestFlashData.encode(encoding='cp1252')
     if reread != oldestFlashData:
-        print "Write failure!  Aborting."
-        print "First wrong offset:"
+        print(reread)
+        print()
+        print(oldestFlashData)
+        print("Write failure!  Aborting.")
+        print("First wrong offset:")
 
-        print type(oldestFlashData), len(oldestFlashData)
-        print type(reread), len(reread)
+        print(type(oldestFlashData), len(oldestFlashData))
+        print(type(reread), len(reread))
         for n, (d1, d2) in enumerate(zip(oldestFlashData, reread)):
             if d1 != d1:
-                print "Broken at", n, binascii.hexlify(d1), binascii.hexlify(d2)
+                print("Broken at", n, binascii.hexlify(d1).decode(encoding='cp1252'), binascii.hexlify(d2).decode(encoding='cp1252'))
     else:
-        print "Write successful."
+        print("Write successful.")
 
 def clearFlash():
     waitForChip()
     currentRom = readROM()
-    print("Detected Chip with ROM: " + binascii.hexlify(currentRom))
+    print("Detected Chip with ROM: " + binascii.hexlify(currentRom).decode())
     write2433("\0" * 512)
 
 # Start the serial port up.  NB this is *nix specific, so needs changing for windows users.
@@ -138,7 +143,7 @@ if "linux" in sys.platform:
 elif sys.platform == "darwin":
     possibleSerialPorts = [d for d in os.listdir("/dev") if "tty.usbserial" in d or "tty.usbmodem" in d]
 else:
-    isWindows = True
+	isWindows = True
 	possibleSerialPorts = ["COM3"]
 	
 
@@ -155,9 +160,8 @@ args = parser.parse_args()
 if args.test:
     waitForChip()
     print("Doing Echo Test")
-    echo()
     print("Reading ROM ID:",)
-    print(binascii.hexlify(readROM()))
+    print(binascii.hexlify(readROM()).decode())
     sys.exit(0)
 
 if args.load:
